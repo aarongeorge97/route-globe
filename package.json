@@ -1,0 +1,12 @@
+{
+  "name": "route-globe",
+  "version": "0.1.0",
+  "description": "An interactive canvas globe of a synthetic delivery network. No libraries, no tokens, no network.",
+  "private": false,
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "build:data": "node scripts/build-data.js"
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}

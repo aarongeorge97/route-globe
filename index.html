@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Route Globe</title>
+<meta name="description" content="An interactive globe of a synthetic delivery network. Canvas only: no libraries, no tokens, no network.">
+<style>
+  :root { color-scheme: dark; --bg: #04060d; --ink: #e8ecf6; --muted: #8b95ad; --gold: #ffd28a; --hair: rgba(255,255,255,.12);
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace; --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--sans); overflow: hidden; }
+  body { background: radial-gradient(90% 70% at 50% 40%, #0b1330 0%, var(--bg) 70%); }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; outline: none; }
+  canvas.grab { cursor: grabbing; }
+  canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--gold); }
+  header { position: fixed; top: 22px; left: 28px; right: 28px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+  h1 { margin: 0; font: 600 13px/1 var(--mono); letter-spacing: .28em; text-transform: uppercase; color: var(--gold); }
+  .sub { margin-top: 8px; font-size: 12px; color: var(--muted); max-width: 30ch; line-height: 1.45; }
+  .stats { display: flex; gap: 22px; text-align: right; }
+  .stat b { display: block; font: 600 22px/1 var(--mono); color: var(--ink); }
+  .stat span { font: 10px/1.6 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  footer { position: fixed; left: 28px; right: 28px; bottom: 20px; display: flex; justify-content: space-between; gap: 16px; font: 10px/1.6 var(--mono); letter-spacing: .08em; color: var(--muted); pointer-events: none; }
+  #tip { position: fixed; pointer-events: none; padding: 7px 10px; border: 1px solid var(--hair); border-radius: 8px; background: rgba(8,12,24,.88); font: 11px/1.5 var(--mono); transform: translate(12px, -50%); display: none; white-space: nowrap; }
+  #tip b { color: var(--gold); letter-spacing: .1em; text-transform: uppercase; }
+  @media (max-width: 640px) { header { flex-direction: column; gap: 14px; } .stats { text-align: left; } footer { flex-direction: column; } }
+</style>
+</head>
+<body>
+<canvas id="g" tabindex="0" role="img" aria-label="Interactive globe showing a synthetic delivery network of hubs and routes. Drag to rotate, scroll to zoom, arrow keys also rotate."></canvas>
+<header>
+  <div><h1>Route Globe</h1><div class="sub">A synthetic hub-and-spoke network. Not real routes.</div></div>
+  <div class="stats">
+    <div class="stat"><b id="s-hubs">–</b><span>Hubs</span></div>
+    <div class="stat"><b id="s-cities">–</b><span>Cities</span></div>
+    <div class="stat"><b id="s-lanes">–</b><span>Lanes</span></div>
+    <div class="stat"><b id="s-km">–</b><span>Network km</span></div>
+  </div>
+</header>
+<div id="tip"></div>
+<footer><span>Drag to rotate · scroll to zoom · arrow keys work too</span><span>Geography: Natural Earth (public domain)</span></footer>
+
+<script src="src/geo.js"></script>
+<script src="data/land.js"></script>
+<script src="data/cities.js"></script>
+<script src="src/globe.js"></script>
+<script>
+(function () {
+  var network = Geo.buildNetwork(ROUTE_CITIES, { hubCount: 7, seed: 7 });
+  var km = network.lanes.reduce(function (s, l) { return s + l.dist * 6371; }, 0);
+  document.getElementById('s-hubs').textContent = network.hubs.length;
+  document.getElementById('s-cities').textContent = ROUTE_CITIES.length;
+  document.getElementById('s-lanes').textContent = network.lanes.length;
+  document.getElementById('s-km').textContent = Math.round(km).toLocaleString('en-US');
+
+  var tip = document.getElementById('tip'), shown = null;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var globe = new Globe(document.getElementById('g'), {
+    land: ROUTE_LAND, cities: ROUTE_CITIES, network: network, reducedMotion: reduced,
+    onhover: function (h) {
+      if (!h) { tip.style.display = 'none'; shown = null; return; }
+      if (shown !== h.city.name) { // called every frame while hovering; only rewrite the text on change
+        tip.textContent = '';
+        var b = document.createElement('b'); b.textContent = h.city.name;
+        tip.append(b, document.createElement('br'), (h.hub ? 'Hub' : 'Spoke') + ' · ' + h.lanes + ' lane' + (h.lanes === 1 ? '' : 's'));
+        shown = h.city.name;
+      }
+      tip.style.left = h.x + 'px'; tip.style.top = h.y + 'px'; tip.style.display = 'block';
+    }
+  });
+  (function loop(now) { globe.frame(now); requestAnimationFrame(loop); })(performance.now());
+})();
+</script>
+</body>
+</html>
